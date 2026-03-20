@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>単艦サバイバル - Contact B</title>
+  <style>
+    :root {
+      --bg: #071018;
+      --panel: #0d1a24;
+      --line: #1d3847;
+      --text: #d7e7ef;
+      --muted: #84a2b3;
+      --accent: #8df0c7;
+      --warn: #ffd166;
+      --danger: #ff6b6b;
+      --good: #92ff9e;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top, rgba(141,240,199,0.08), transparent 28%),
+        linear-gradient(180deg, #09131b 0%, #050b11 100%);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    .wrap {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 18px;
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 18px;
+    }
+    .panel {
+      background: linear-gradient(180deg, rgba(13,26,36,0.96), rgba(9,19,27,0.96));
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+      overflow: hidden;
+    }
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255,255,255,0.02);
+    }
+    .title {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+    .subtitle {
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .bridge {
+      position: relative;
+      min-height: 680px;
+      display: grid;
+      grid-template-rows: 1fr auto;
+    }
+    .visual {
+      position: relative;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 50% 35%, rgba(255,255,255,0.06), transparent 24%),
+        linear-gradient(180deg, #0a1520 0%, #0b1620 48%, #08141f 48%, #0a1a28 100%);
+    }
+    .stars, .sea, .ship {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+    .stars::before,
+    .stars::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image:
+        radial-gradient(circle, rgba(255,255,255,0.7) 1px, transparent 1.5px),
+        radial-gradient(circle, rgba(255,255,255,0.35) 1px, transparent 1.5px);
+      background-size: 120px 120px, 180px 180px;
+      background-position: 20px 30px, 70px 90px;
+      opacity: 0.35;
+    }
+    .sea {
+      top: 48%;
+      background:
+        linear-gradient(180deg, rgba(20,52,74,0.18), rgba(12,39,58,0.06)),
+        repeating-linear-gradient(
+          0deg,
+          rgba(141,240,199,0.05) 0px,
+          rgba(141,240,199,0.05) 1px,
+          transparent 1px,
+          transparent 14px
+        );
+    }
+    .sea::before,
+    .sea::after {
+      content: "";
+      position: absolute;
+      left: -10%;
+      width: 120%;
+      height: 22px;
+      border-top: 1px solid rgba(141,240,199,0.18);
+      border-radius: 50%;
+      animation: drift 10s linear infinite;
+      opacity: 0.8;
+    }
+    .sea::before { top: 18%; }
+    .sea::after { top: 42%; animation-duration: 14s; opacity: 0.5; }
+    @keyframes drift {
+      from { transform: translateX(0); }
+      to { transform: translateX(-80px); }
+    }
+    .ship {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .ship-svg {
+      width: min(80%, 760px);
+      height: auto;
+      filter: drop-shadow(0 10px 28px rgba(0,0,0,0.45));
+      transform: translateY(16px);
+      transition: transform 0.35s ease, filter 0.35s ease;
+      animation: bob 4.8s ease-in-out infinite;
+    }
+    @keyframes bob {
+      0%, 100% { transform: translateY(16px) rotate(-0.6deg); }
+      50% { transform: translateY(10px) rotate(0.6deg); }
+    }
+    .damage .ship-svg { filter: drop-shadow(0 12px 34px rgba(255,107,107,0.25)); }
+    .flash {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 50% 50%, rgba(255,107,107,0.22), transparent 36%);
+      opacity: 0;
+      transition: opacity 0.25s ease;
+    }
+    .flash.active { opacity: 1; }
+    .overlay {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      pointer-events: none;
+    }
+    .radar-wrap {
+      padding: 18px;
+    }
+    .radar {
+      width: 240px;
+      height: 240px;
+      border-radius: 50%;
+      border: 1px solid rgba(141,240,199,0.35);
+      position: relative;
+      background:
+        radial-gradient(circle, rgba(141,240,199,0.05) 0 1px, transparent 1px),
+        radial-gradient(circle at center, rgba(141,240,199,0.06), transparent 70%),
+        #08131b;
+      box-shadow: inset 0 0 0 1px rgba(141,240,199,0.08);
+    }
+    .radar::before,
+    .radar::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      border: 1px solid rgba(141,240,199,0.14);
+      border-radius: 50%;
+    }
+    .radar::before { width: 66%; height: 66%; }
+    .radar::after { width: 33%; height: 33%; }
+    .radar-line-h,
+    .radar-line-v,
+    .sweep,
+    .contact,
+    .ship-dot {
+      position: absolute;
+    }
+    .radar-line-h {
+      left: 8%; right: 8%; top: 50%; height: 1px; background: rgba(141,240,199,0.16);
+      transform: translateY(-50%);
+    }
+    .radar-line-v {
+      top: 8%; bottom: 8%; left: 50%; width: 1px; background: rgba(141,240,199,0.16);
+      transform: translateX(-50%);
+    }
+    .sweep {
+      inset: 0;
+      border-radius: 50%;
+      background: conic-gradient(from 0deg, rgba(141,240,199,0.22), transparent 48deg, transparent 360deg);
+      mix-blend-mode: screen;
+      animation: sweep 4s linear infinite;
+      opacity: 0.75;
+    }
+    @keyframes sweep { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    .ship-dot {
+      width: 8px; height: 8px; border-radius: 50%; background: var(--accent);
+      left: calc(50% - 4px); top: calc(50% - 4px);
+      box-shadow: 0 0 10px rgba(141,240,199,0.8);
+    }
+    .contact {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: var(--warn);
+      box-shadow: 0 0 8px rgba(255,209,102,0.7);
+      transform: translate(-50%, -50%);
+      opacity: 0.9;
+      transition: left 0.5s ease, top 0.5s ease, opacity 0.3s ease, background 0.3s ease;
+    }
+    .contact.dim { opacity: 0.35; }
+    .contact.hostile { background: var(--danger); box-shadow: 0 0 8px rgba(255,107,107,0.8); }
+    .status-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      padding: 14px 16px;
+      border-top: 1px solid var(--line);
+      background: rgba(255,255,255,0.02);
+    }
+    .metric {
+      padding: 10px 12px;
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 12px;
+      background: rgba(255,255,255,0.02);
+    }
+    .metric .label {
+      color: var(--muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 6px;
+    }
+    .metric .value {
+      font-size: 22px;
+      font-weight: 700;
+    }
+    .metric small { color: var(--muted); }
+    .side {
+      display: grid;
+      grid-template-rows: auto auto 1fr auto;
+      min-height: 680px;
+    }
+    .brief, .actions, .log, .ending {
+      padding: 16px;
+      border-bottom: 1px solid var(--line);
+    }
+    .brief p, .ending p { margin: 8px 0 0; color: var(--muted); line-height: 1.6; }
+    .intel-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .intel-card {
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.05);
+      background: rgba(255,255,255,0.02);
+    }
+    .intel-card .k { color: var(--muted); font-size: 12px; }
+    .intel-card .v { margin-top: 6px; font-size: 16px; font-weight: 700; }
+    .actions-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      margin-top: 14px;
+    }
+    button {
+      width: 100%;
+      border: 1px solid rgba(141,240,199,0.18);
+      background: linear-gradient(180deg, rgba(141,240,199,0.09), rgba(141,240,199,0.04));
+      color: var(--text);
+      padding: 12px 14px;
+      border-radius: 12px;
+      text-align: left;
+      cursor: pointer;
+      transition: transform 0.08s ease, border-color 0.2s ease, background 0.2s ease;
+    }
+    button:hover { transform: translateY(-1px); border-color: rgba(141,240,199,0.3); }
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.45;
+      transform: none;
+    }
+    button .main { display: block; font-weight: 700; margin-bottom: 4px; }
+    button .sub { display: block; color: var(--muted); font-size: 12px; }
+    .secondary {
+      border-color: rgba(255,255,255,0.08);
+      background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+    }
+    .danger {
+      border-color: rgba(255,107,107,0.2);
+      background: linear-gradient(180deg, rgba(255,107,107,0.12), rgba(255,107,107,0.04));
+    }
+    .log {
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .log-list {
+      margin-top: 12px;
+      padding-right: 6px;
+      overflow: auto;
+      max-height: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .entry {
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.04);
+      line-height: 1.5;
+      font-size: 13px;
+    }
+    .entry.warn { border-color: rgba(255,209,102,0.18); }
+    .entry.danger { border-color: rgba(255,107,107,0.2); }
+    .entry.good { border-color: rgba(146,255,158,0.18); }
+    .ending {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      border-bottom: 0;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.06);
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .smoke {
+      position: absolute;
+      right: 25%;
+      bottom: 44%;
+      width: 90px;
+      height: 140px;
+      opacity: 0;
+      transition: opacity 0.4s ease;
+      pointer-events: none;
+      filter: blur(2px);
+    }
+    .smoke.active { opacity: 0.9; }
+    .smoke span {
+      position: absolute;
+      bottom: 0;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(180,180,180,0.55), rgba(80,80,80,0.12));
+      animation: smokeRise 3.5s ease-in infinite;
+    }
+    .smoke span:nth-child(1) { left: 8px; animation-delay: 0s; }
+    .smoke span:nth-child(2) { left: 26px; animation-delay: 1.1s; }
+    .smoke span:nth-child(3) { left: 44px; animation-delay: 2.1s; }
+    @keyframes smokeRise {
+      0% { transform: translateY(0) scale(0.8); opacity: 0.4; }
+      100% { transform: translateY(-110px) translateX(18px) scale(2.2); opacity: 0; }
+    }
+    @media (max-width: 980px) {
+      .wrap { grid-template-columns: 1fr; }
+      .bridge, .side { min-height: auto; }
+      .overlay { grid-template-columns: 1fr; }
+      .radar-wrap { padding-bottom: 0; }
+      .radar { width: 200px; height: 200px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="panel bridge" id="bridgePanel">
+      <div class="panel-header">
+        <div>
+          <div class="title">SINGLE SHIP SURVIVAL / CONTACT B</div>
+          <div class="subtitle">単艦・夜間巡航・未確認接触</div>
+        </div>
+        <div class="pill">🎯 生存優先 / 誤射回避</div>
+      </div>
+
+      <div class="visual" id="visual">
+        <div class="stars"></div>
+        <div class="sea"></div>
+        <div class="ship" id="shipArea">
+          <svg class="ship-svg" viewBox="0 0 900 280" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="艦艇">
+            <path d="M108 176L194 150H602L706 166L794 166L846 178L872 194L810 205L760 207L734 214L676 224H304L210 206L122 196L76 188L58 182L108 176Z" fill="#7F8C96"/>
+            <path d="M205 145H592L640 102H694L720 137H780V166H706L602 150H194L205 145Z" fill="#95A3AE"/>
+            <path d="M302 111H433V151H302V111Z" fill="#AAB8C2"/>
+            <path d="M350 71H393V111H350V71Z" fill="#BAC6CF"/>
+            <path d="M383 53H405V71H383V53Z" fill="#CED6DD"/>
+            <path d="M404 67L429 41H442L417 67H404Z" fill="#C6D1D9"/>
+            <rect x="441" y="114" width="74" height="21" rx="4" fill="#8897A1"/>
+            <rect x="539" y="119" width="64" height="12" rx="2" fill="#86939D"/>
+            <rect x="604" y="127" width="20" height="8" rx="2" fill="#D1D8DE"/>
+            <ellipse cx="171" cy="178" rx="32" ry="7" fill="rgba(255,255,255,0.08)"/>
+            <ellipse cx="740" cy="192" rx="45" ry="9" fill="rgba(255,255,255,0.06)"/>
+            <path d="M152 166L198 154" stroke="#D9E0E5" stroke-width="3" stroke-linecap="round"/>
+            <path d="M430 102L430 76" stroke="#DFE7EB" stroke-width="4" stroke-linecap="round"/>
+            <path d="M441 93L441 69" stroke="#DFE7EB" stroke-width="4" stroke-linecap="round"/>
+            <path d="M459 118L479 97" stroke="#D6DFE5" stroke-width="3" stroke-linecap="round"/>
+            <path d="M616 121L650 92" stroke="#D6DFE5" stroke-width="3" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="smoke" id="smoke">
+          <span></span><span></span><span></span>
+        </div>
+        <div class="flash" id="flash"></div>
+
+        <div class="overlay">
+          <div class="radar-wrap">
+            <div class="radar">
+              <div class="radar-line-h"></div>
+              <div class="radar-line-v"></div>
+              <div class="sweep"></div>
+              <div class="ship-dot"></div>
+              <div class="contact" id="contactDot"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="status-strip">
+        <div class="metric">
+          <div class="label">艦体</div>
+          <div class="value" id="hullValue">100</div>
+          <small>% / 戦闘継続可</small>
+        </div>
+        <div class="metric">
+          <div class="label">露見度</div>
+          <div class="value" id="exposureValue">12</div>
+          <small>% / 高いほど危険</small>
+        </div>
+        <div class="metric">
+          <div class="label">弾薬</div>
+          <div class="value" id="ammoValue">2</div>
+          <small>対艦ミサイル</small>
+        </div>
+        <div class="metric">
+          <div class="label">時刻</div>
+          <div class="value" id="timeValue">00:18</div>
+          <small>夜間巡航</small>
+        </div>
+      </div>
+    </section>
+
+    <aside class="panel side">
+      <div class="panel-header">
+        <div>
+          <div class="title">TACTICAL DECISION</div>
+          <div class="subtitle">接触1件 / 正体不明</div>
+        </div>
+        <div class="pill" id="phasePill">フェーズ 1 / 接触</div>
+      </div>
+
+      <div class="brief">
+        <div class="title" style="font-size:16px;">状況</div>
+        <p>単艦で巡航中。前方海域に未確認接触。敵艦の可能性も、民間船の可能性もある。生き残りが最優先。ただし誤射は致命的な戦略ミスになる。</p>
+        <div class="intel-grid">
+          <div class="intel-card"><div class="k">識別</div><div class="v" id="idValue">不明</div></div>
+          <div class="intel-card"><div class="k">距離</div><div class="v" id="rangeValue">遠</div></div>
+          <div class="intel-card"><div class="k">速度</div><div class="v" id="speedValue">中</div></div>
+          <div class="intel-card"><div class="k">挙動</div><div class="v" id="behaviorValue">監視中</div></div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <div class="title" style="font-size:16px;">行動</div>
+        <div class="actions-grid">
+          <button id="passiveBtn">
+            <span class="main">静観・受動監視</span>
+            <span class="sub">露見度を抑える。情報は少ないが、相手を刺激しにくい。</span>
+          </button>
+          <button id="activeBtn">
+            <span class="main">能動索敵</span>
+            <span class="sub">識別精度が上がる。代わりにこちらの位置も露見しやすい。</span>
+          </button>
+          <button id="missileBtn" class="danger">
+            <span class="main">先制攻撃</span>
+            <span class="sub">相手が敵なら有効。民間船なら即座に重大失敗。</span>
+          </button>
+          <button id="advanceBtn" class="secondary">
+            <span class="main">時間経過</span>
+            <span class="sub">決断を保留する。相手が先に動くかもしれない。</span>
+          </button>
+          <button id="restartBtn" class="secondary" style="display:none;">
+            <span class="main">再出撃</span>
+            <span class="sub">新しい状況でもう一度プレイ。</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="log">
+        <div class="title" style="font-size:16px;">ログ</div>
+        <div class="log-list" id="logList"></div>
+      </div>
+
+      <div class="ending">
+        <div>
+          <div class="title" style="font-size:16px;">判定</div>
+          <p id="resultText">まだ交戦には入っていない。情報を集めつつ、撃つ・待つ・やり過ごすを判断せよ。</p>
+        </div>
+        <div class="pill" id="scorePill">生存率 —</div>
+      </div>
+    </aside>
+  </div>
+
+  <script>
+    const state = {};
+
+    const el = {
+      hullValue: document.getElementById('hullValue'),
+      exposureValue: document.getElementById('exposureValue'),
+      ammoValue: document.getElementById('ammoValue'),
+      timeValue: document.getElementById('timeValue'),
+      idValue: document.getElementById('idValue'),
+      rangeValue: document.getElementById('rangeValue'),
+      speedValue: document.getElementById('speedValue'),
+      behaviorValue: document.getElementById('behaviorValue'),
+      phasePill: document.getElementById('phasePill'),
+      resultText: document.getElementById('resultText'),
+      scorePill: document.getElementById('scorePill'),
+      contactDot: document.getElementById('contactDot'),
+      logList: document.getElementById('logList'),
+      passiveBtn: document.getElementById('passiveBtn'),
+      activeBtn: document.getElementById('activeBtn'),
+      missileBtn: document.getElementById('missileBtn'),
+      advanceBtn: document.getElementById('advanceBtn'),
+      restartBtn: document.getElementById('restartBtn'),
+      flash: document.getElementById('flash'),
+      bridgePanel: document.getElementById('bridgePanel'),
+      smoke: document.getElementById('smoke')
+    };
+
+    function rand(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function pick(arr) {
+      return arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    function resetGame() {
+      state.truth = Math.random() < 0.58 ? 'hostile' : 'civilian';
+      state.hull = 100;
+      state.exposure = rand(8, 16);
+      state.ammo = 2;
+      state.timeMin = 18;
+      state.phase = 1;
+      state.ended = false;
+      state.classification = '不明';
+      state.rangeIndex = 0; // 0遠 1中 2近
+      state.speed = pick(['低', '中', '高']);
+      state.behavior = '監視中';
+      state.contactConfidence = 18;
+      state.hostilitySignal = state.truth === 'hostile' ? rand(18, 34) : rand(-12, 8);
+      state.contactBearing = rand(20, 320);
+      state.contactDistance = 74;
+      state.turns = 0;
+      state.revealed = false;
+      state.missileSpent = false;
+      state.lastAction = 'start';
+
+      el.logList.innerHTML = '';
+      addLog('夜間巡航中。前方海域に未確認接触。敵艦の可能性あり。', 'warn');
+      addLog('司令：生存優先。ただし誤射は許されない。', '');
+      el.restartBtn.style.display = 'none';
+      el.bridgePanel.classList.remove('damage');
+      el.smoke.classList.remove('active');
+      flash(false);
+      updateUI();
+      updateButtons();
+    }
+
+    function flash(on = true) {
+      el.flash.classList.toggle('active', on);
+      if (on) {
+        setTimeout(() => el.flash.classList.remove('active'), 260);
+      }
+    }
+
+    function addLog(text, tone = '') {
+      const div = document.createElement('div');
+      div.className = `entry ${tone}`.trim();
+      div.textContent = text;
+      el.logList.prepend(div);
+    }
+
+    function fmtTime(min) {
+      const h = String(Math.floor(min / 60)).padStart(2, '0');
+      const m = String(min % 60).padStart(2, '0');
+      return `${h}:${m}`;
+    }
+
+    function rangeLabel() {
+      return ['遠', '中', '近'][state.rangeIndex];
+    }
+
+    function updateContactDot() {
+      const radiusMap = [74, 52, 28];
+      const r = radiusMap[state.rangeIndex];
+      const rad = state.contactBearing * Math.PI / 180;
+      const x = 120 + Math.cos(rad) * r;
+      const y = 120 + Math.sin(rad) * r;
+      el.contactDot.style.left = `${x}px`;
+      el.contactDot.style.top = `${y}px`;
+      el.contactDot.classList.toggle('dim', state.classification === '不明' && state.contactConfidence < 30);
+      el.contactDot.classList.toggle('hostile', state.classification === '敵性の疑い' || (state.ended && state.truth === 'hostile' && state.hull > 0));
+    }
+
+    function updateUI() {
+      el.hullValue.textContent = Math.max(0, state.hull);
+      el.exposureValue.textContent = Math.max(0, Math.min(100, state.exposure));
+      el.ammoValue.textContent = state.ammo;
+      el.timeValue.textContent = fmtTime(state.timeMin);
+      el.idValue.textContent = state.classification;
+      el.rangeValue.textContent = rangeLabel();
+      el.speedValue.textContent = state.speed;
+      el.behaviorValue.textContent = state.behavior;
+      el.phasePill.textContent = state.ended ? '結果確定' : `フェーズ ${state.phase} / 接触`;
+      updateContactDot();
+      const score = state.ended
+        ? (state.hull <= 0 ? '生存率 0%' : state.truth === 'civilian' && state.lastAction === 'missile' ? '生存率 0%' : `生存率 ${Math.max(8, state.hull - Math.max(0, state.exposure - 20))}%`)
+        : '生存率 —';
+      el.scorePill.textContent = score;
+    }
+
+    function updateButtons() {
+      const disabled = state.ended;
+      el.passiveBtn.disabled = disabled;
+      el.activeBtn.disabled = disabled;
+      el.advanceBtn.disabled = disabled;
+      el.missileBtn.disabled = disabled || state.ammo <= 0;
+    }
+
+    function passiveObserve() {
+      if (state.ended) return;
+      state.turns += 1;
+      state.timeMin += 4;
+      state.exposure = Math.max(0, state.exposure - rand(1, 3));
+      state.contactConfidence += rand(4, 9);
+      state.hostilitySignal += state.truth === 'hostile' ? rand(6, 14) : rand(-2, 4);
+      state.contactBearing += rand(-12, 10);
+      if (state.rangeIndex < 2 && Math.random() < 0.68) state.rangeIndex += 1;
+
+      if (state.truth === 'hostile') {
+        state.behavior = pick(['針路維持', '接近傾向', '断続的な観測波']);
+      } else {
+        state.behavior = pick(['航路安定', '商船らしき変針', '灯火らしき反応']);
+      }
+
+      addLog('受動監視を継続。艦の露見度を抑えつつ接触挙動を観察。');
+      refineClassification('passive');
+      enemyMayAct('passive');
+      resolveEndCheck();
+      updateUI();
+      updateButtons();
+    }
+
+    function activeScan() {
+      if (state.ended) return;
+      state.turns += 1;
+      state.timeMin += 3;
+      state.exposure += rand(10, 18);
+      state.contactConfidence += rand(18, 28);
+      state.hostilitySignal += state.truth === 'hostile' ? rand(8, 16) : rand(-4, 6);
+      state.contactBearing += rand(-8, 8);
+      if (state.rangeIndex < 2 && Math.random() < 0.5) state.rangeIndex += 1;
+
+      state.behavior = state.truth === 'hostile'
+        ? pick(['電子反応増大', '追尾の疑い', '接近明確'])
+        : pick(['応答曖昧', '航路維持', '商船らしき速度変化']);
+
+      addLog('能動索敵を実施。識別材料は増えたが、こちらの存在も目立つ。', 'warn');
+      refineClassification('active');
+      enemyMayAct('active');
+      resolveEndCheck();
+      updateUI();
+      updateButtons();
+    }
+
+    function fireMissile() {
+      if (state.ended || state.ammo <= 0) return;
+      state.turns += 1;
+      state.timeMin += 1;
+      state.ammo -= 1;
+      state.lastAction = 'missile';
+      flash(true);
+      addLog('対艦ミサイル発射。判断の余地を武力で打ち切った。', 'danger');
+
+      if (state.truth === 'civilian') {
+        state.classification = '民間船';
+        state.behavior = '撃沈 / 誤射';
+        state.ended = true;
+        el.resultText.textContent = '重大失敗。未確認接触は民間船だった。生き残っても戦略的には敗北。';
+        addLog('識別遅れ。対象は民間船だった。作戦は即時失敗。', 'danger');
+      } else {
+        const hitChance = 72 + Math.min(18, state.contactConfidence / 4) - (state.rangeIndex === 0 ? 10 : 0);
+        if (Math.random() * 100 < hitChance) {
+          state.classification = '敵艦';
+          state.behavior = '撃破';
+          state.ended = true;
+          el.resultText.textContent = '敵性接触を撃破。単艦は生き残ったが、これは最後まで確証のない決断だった。';
+          addLog('命中確認。敵性接触は沈黙。単艦は生存。', 'good');
+        } else {
+          state.classification = '敵性の疑い';
+          state.behavior = '回避・反撃';
+          addLog('命中不確実。接触は回避運動。反撃の可能性大。', 'warn');
+          enemyStrike(true);
+        }
+      }
+
+      resolveEndCheck();
+      updateUI();
+      updateButtons();
+    }
+
+    function advanceTime() {
+      if (state.ended) return;
+      state.turns += 1;
+      state.timeMin += 5;
+      state.exposure += rand(1, 5);
+      state.contactConfidence += rand(2, 6);
+      state.contactBearing += rand(-16, 14);
+      if (state.rangeIndex < 2 && Math.random() < 0.82) state.rangeIndex += 1;
+
+      state.behavior = state.truth === 'hostile'
+        ? pick(['接近傾向', '断続追尾', '沈黙継続'])
+        : pick(['航路維持', '針路微修正', '相対距離縮小']);
+
+      addLog('決断を保留。時間だけが進み、相手の選択肢が増える。');
+      refineClassification('wait');
+      enemyMayAct('wait');
+      resolveEndCheck();
+      updateUI();
+      updateButtons();
+    }
+
+    function refineClassification(mode) {
+      const c = state.contactConfidence;
+      const hs = state.hostilitySignal;
+
+      if (c > 58 && hs <= -2) {
+        state.classification = '民間の可能性高';
+      } else if (c > 42 && hs > 12) {
+        state.classification = '敵性の疑い';
+      } else if (c > 68 && hs > 20) {
+        state.classification = '敵艦';
+      } else if (c > 36) {
+        state.classification = '不明（特徴取得中）';
+      }
+
+      if (mode === 'active' && state.truth === 'civilian' && c > 55 && Math.random() < 0.55) {
+        state.behavior = '応答弱 / 商船らしき信号';
+      }
+    }
+
+    function enemyMayAct(mode) {
+      if (state.truth !== 'hostile' || state.ended) {
+        if (state.truth === 'civilian' && state.contactConfidence > 64 && state.exposure < 30 && mode !== 'active') {
+          state.behavior = '航路離脱';
+          if (state.rangeIndex > 0 && Math.random() < 0.5) state.rangeIndex -= 1;
+          if (state.contactConfidence > 78) {
+            state.ended = true;
+            state.classification = '民間船';
+            el.resultText.textContent = '接触は民間船だった。撃たず、騒がせず、やり過ごした。静かな勝利。';
+            addLog('対象は民間船と判明。こちらは関与せず巡航継続。', 'good');
+          }
+        }
+        return;
+      }
+
+      let strikeRisk = 0;
+      strikeRisk += state.exposure * 0.45;
+      strikeRisk += state.rangeIndex * 12;
+      strikeRisk += mode === 'active' ? 18 : 0;
+      strikeRisk += mode === 'wait' ? 8 : 0;
+      strikeRisk += Math.max(0, state.hostilitySignal);
+
+      if (Math.random() * 100 < strikeRisk * 0.32) {
+        enemyStrike(false);
+      }
+    }
+
+    function enemyStrike(retaliation) {
+      const damage = retaliation ? rand(28, 44) : rand(16, 34);
+      state.hull -= damage;
+      state.exposure += rand(8, 15);
+      state.classification = '敵艦';
+      state.behavior = retaliation ? '反撃実施' : '先制攻撃';
+      el.bridgePanel.classList.add('damage');
+      el.smoke.classList.add('active');
+      flash(true);
+      addLog(retaliation ? `敵艦が反撃。被害 ${damage}%。` : `敵の先制攻撃。被害 ${damage}%。`, 'danger');
+      if (state.hull > 0) {
+        el.resultText.textContent = '被弾。まだ沈まないが、次の判断はより重くなる。';
+      }
+    }
+
+    function resolveEndCheck() {
+      if (state.hull <= 0) {
+        state.hull = 0;
+        state.ended = true;
+        el.resultText.textContent = '艦は戦闘継続不能。単艦サバイバル失敗。情報不足か、決断遅延か、あるいは賭けに負けた。';
+        addLog('艦体限界。これ以上の継戦は不能。', 'danger');
+      }
+
+      if (!state.ended && state.turns >= 6) {
+        if (state.truth === 'hostile') {
+          if (state.classification === '敵艦' || state.exposure > 44) {
+            enemyStrike(false);
+            if (state.hull > 0 && !state.ended) {
+              state.ended = true;
+              el.resultText.textContent = '敵を見切れず決着が長引いた。辛うじて生き残っても、主導権は失っていた。';
+            }
+          } else {
+            state.ended = true;
+            el.resultText.textContent = '接触は去った。敵だった可能性は残るが、今回は交戦を避けて生き残った。';
+            addLog('接触は遠ざかった。確証は残らないが、生存は達成。', 'good');
+          }
+        } else {
+          state.ended = true;
+          state.classification = '民間船';
+          el.resultText.textContent = '長い監視の末、民間船と判明。撃たずに済んだこと自体が成果。';
+          addLog('航跡照合。対象は民間船と判断。', 'good');
+        }
+      }
+
+      if (state.ended) {
+        el.restartBtn.style.display = 'block';
+      }
+    }
+
+    el.passiveBtn.addEventListener('click', passiveObserve);
+    el.activeBtn.addEventListener('click', activeScan);
+    el.missileBtn.addEventListener('click', fireMissile);
+    el.advanceBtn.addEventListener('click', advanceTime);
+    el.restartBtn.addEventListener('click', resetGame);
+
+    resetGame();
+  </script>
+</body>
+</html>
